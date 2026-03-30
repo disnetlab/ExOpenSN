@@ -5,6 +5,7 @@ import (
 	"NodeDaemon/data"
 	"NodeDaemon/model"
 	"encoding/json"
+	"strings"
 
 	"NodeDaemon/share/dir"
 	"NodeDaemon/share/key"
@@ -20,17 +21,63 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
+const MaskGroupSizeLog2 = 5
+const Mask32 = 0x1F
+
 var StopTimeoutSecond = 20
 var InstanceParallelLimitChan chan uint8
 
+var (
+	cpuCoreInex              = 0
+	cpuCoreMutex *sync.Mutex = &sync.Mutex{}
+)
+
+func GetCPUCoreIndex() int {
+	cpuCoreMutex.Lock()
+	defer cpuCoreMutex.Unlock()
+	ret := (cpuCoreInex + 1) % key.SelfNode.CPUCore
+	cpuCoreInex = ret
+	return ret
+}
+
+func GenerateCoreIndexMaskHex(coreIndex int, totalCore int) string {
+	sb := strings.Builder{}
+	groupCount := totalCore >> MaskGroupSizeLog2
+	hasMod := totalCore & Mask32
+	flipGroup := coreIndex >> MaskGroupSizeLog2
+	coreBitIndex := coreIndex & Mask32
+
+	if hasMod != 0 {
+		groupCount++
+	}
+
+	for i := groupCount - 1; i >= 0; i-- {
+		if flipGroup == i {
+			sb.WriteString(fmt.Sprintf("%08x", 1<<coreBitIndex))
+		} else {
+			sb.WriteString("00000000")
+		}
+		if i != 0 {
+			sb.WriteByte(',')
+		}
+	}
+	return sb.String()[((32-hasMod)&Mask32)>>2:]
+
+}
+
 func CreateContainer(instance *model.Instance) error {
 	containerID := fmt.Sprintf("%s_%s", instance.Type, instance.InstanceID)
+	// localCpuCoreIndex := GetCPUCoreIndex()
+
 	err := utils.DoWithRetry(func() error {
 
 		containerConfig := &container.Config{
-			Hostname:    instance.InstanceID,
-			Image:       instance.Image,
-			Env:         []string{},
+			Hostname: instance.InstanceID,
+			Image:    instance.Image,
+			Env: []string{
+				// fmt.Sprintf("IRQ_MASK=%s", GenerateCoreIndexMaskHex(localCpuCoreIndex, key.SelfNode.CPUCore)),
+				fmt.Sprintf("IRQ_MASK=00,00000000"),
+			},
 			StopTimeout: &StopTimeoutSecond,
 		}
 
@@ -41,8 +88,9 @@ func CreateContainer(instance *model.Instance) error {
 				fmt.Sprintf("%s:%s", dir.MountShareData, "/share"),
 			},
 			Resources: container.Resources{
-				NanoCPUs: instance.Resource.NanoCPU,
-				Memory:   instance.Resource.MemoryByte,
+				NanoCPUs:   instance.Resource.NanoCPU,
+				Memory:     instance.Resource.MemoryByte,
+				// CpusetCpus: fmt.Sprintf("%d", localCpuCoreIndex),
 			},
 		}
 

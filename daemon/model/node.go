@@ -10,4 +10,5 @@ type Node struct {
 	NsInstanceMap      map[string]string `json:"ns_instance_map"`
 	NsLinkMap          map[string]string `json:"ns_link_map"`
 	NodeLinkDeviceInfo map[string]int    `json:"node_link_device_info"`
+	CPUCore            int               `json:"cpu_core"`
 }

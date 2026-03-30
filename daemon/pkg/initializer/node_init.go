@@ -8,6 +8,7 @@ import (
 	"NodeDaemon/utils"
 	"errors"
 	"fmt"
+	"runtime"
 	"strconv"
 
 	"github.com/vishvananda/netlink"
@@ -131,6 +132,7 @@ func NodeInit() error {
 	}
 
 	key.InitKeys()
+
 	selfInfo := &model.Node{
 		NodeIndex:          key.NodeIndex,
 		FreeInstance:       config.GlobalConfig.App.InstanceCapacity,
@@ -138,6 +140,7 @@ func NodeInit() error {
 		NsInstanceMap:      map[string]string{},
 		NsLinkMap:          map[string]string{},
 		NodeLinkDeviceInfo: map[string]int{},
+		CPUCore:            runtime.NumCPU(),
 	}
 
 	for k, v := range config.GlobalConfig.Device {
