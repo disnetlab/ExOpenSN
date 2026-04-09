@@ -147,7 +147,7 @@ class EmulatorOperator:
         connect_info_2.instance_id = instance1.instance_id
         connect_info_2.instance_type = instance1.type
         connect_info_2.link_id = new_link_array[0].link_id
-        instance2.connections[new_link_array[0].link_id] = connect_info_1
+        instance2.connections[new_link_array[0].link_id] = connect_info_2
         put_instance(self.etcd_client,instance2)
             
 
