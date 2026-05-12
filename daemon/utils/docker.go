@@ -3,16 +3,16 @@ package utils
 import (
 	"fmt"
 
-	dockerClient "github.com/docker/docker/client"
+	dockerClient "github.com/moby/moby/client"
 	"github.com/sirupsen/logrus"
 )
 
 var DockerClient *dockerClient.Client
 
-func InitDockerClient(sockPath string) error{
-	url := fmt.Sprintf("unix://%s",sockPath)
+func InitDockerClient(sockPath string) error {
+	url := fmt.Sprintf("unix://%s", sockPath)
 	cli, err := dockerClient.NewClientWithOpts(dockerClient.WithHost(url))
-	
+
 	if err != nil {
 		logrus.Error("Init Docker Client Error:", err.Error())
 		return err

@@ -15,14 +15,15 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 const MaskGroupSizeLog2 = 5
 const Mask32 = 0x1F
+const CPUPeriodUs = 5000
 
 var StopTimeoutSecond = 20
 var InstanceParallelLimitChan chan uint8
@@ -38,6 +39,13 @@ func GetCPUCoreIndex() int {
 	ret := (cpuCoreInex + 1) % key.SelfNode.CPUCore
 	cpuCoreInex = ret
 	return ret
+}
+
+func Max(a, b int64) int64 {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func GenerateCoreIndexMaskHex(coreIndex int, totalCore int) string {
@@ -67,7 +75,7 @@ func GenerateCoreIndexMaskHex(coreIndex int, totalCore int) string {
 
 func CreateContainer(instance *model.Instance) error {
 	containerID := fmt.Sprintf("%s_%s", instance.Type, instance.InstanceID)
-	// localCpuCoreIndex := GetCPUCoreIndex()
+	localCpuCoreIndex := GetCPUCoreIndex()
 
 	err := utils.DoWithRetry(func() error {
 
@@ -75,8 +83,8 @@ func CreateContainer(instance *model.Instance) error {
 			Hostname: instance.InstanceID,
 			Image:    instance.Image,
 			Env: []string{
-				// fmt.Sprintf("IRQ_MASK=%s", GenerateCoreIndexMaskHex(localCpuCoreIndex, key.SelfNode.CPUCore)),
-				fmt.Sprintf("IRQ_MASK=00,00000000"),
+				fmt.Sprintf("IRQ_MASK=%s", GenerateCoreIndexMaskHex(localCpuCoreIndex, key.SelfNode.CPUCore)),
+				// "IRQ_MASK=00,00000000",
 			},
 			StopTimeout: &StopTimeoutSecond,
 		}
@@ -88,19 +96,21 @@ func CreateContainer(instance *model.Instance) error {
 				fmt.Sprintf("%s:%s", dir.MountShareData, "/share"),
 			},
 			Resources: container.Resources{
-				NanoCPUs:   instance.Resource.NanoCPU,
+				// NanoCPUs:   instance.Resource.NanoCPU,
 				Memory:     instance.Resource.MemoryByte,
-				// CpusetCpus: fmt.Sprintf("%d", localCpuCoreIndex),
+				CPUPeriod:  CPUPeriodUs,
+				CPUQuota:   Max(1001, instance.Resource.NanoCPU*CPUPeriodUs/1e9+1),
+				CpusetCpus: fmt.Sprintf("%d", localCpuCoreIndex),
 			},
 		}
 
 		_, err := utils.DockerClient.ContainerCreate(
 			context.Background(),
-			containerConfig,
-			hostConfig,
-			nil,
-			nil,
-			containerID,
+			client.ContainerCreateOptions{
+				Config:     containerConfig,
+				HostConfig: hostConfig,
+				Name:       containerID,
+			},
 		)
 
 		if err != nil {
@@ -121,22 +131,23 @@ func StartContainer(instance *model.Instance) (int, error) {
 	containerID := fmt.Sprintf("%s_%s", instance.Type, instance.InstanceID)
 	pid := 0
 	err := utils.DoWithRetry(func() error {
-		return utils.DockerClient.ContainerStart(
+		_, err := utils.DockerClient.ContainerStart(
 			context.Background(),
 			containerID,
-			types.ContainerStartOptions{},
+			client.ContainerStartOptions{},
 		)
+		return err
 	}, 4)
 	if err != nil {
 		return pid, fmt.Errorf("start container %s error: %s", containerID, err.Error())
 	}
 
 	err = utils.DoWithRetry(func() error {
-		info, err := utils.DockerClient.ContainerInspect(context.Background(), containerID)
+		info, err := utils.DockerClient.ContainerInspect(context.Background(), containerID, client.ContainerInspectOptions{})
 		if err != nil {
 			return err
 		}
-		pid = info.State.Pid
+		pid = info.Container.State.Pid
 		return nil
 	}, 4)
 
@@ -152,7 +163,8 @@ func StopContainer(instance *model.Instance) error {
 	containerID := fmt.Sprintf("%s_%s", instance.Type, instance.InstanceID)
 
 	err := utils.DoWithRetry(func() error {
-		return utils.DockerClient.ContainerStop(context.Background(), containerID, container.StopOptions{})
+		_, err := utils.DockerClient.ContainerStop(context.Background(), containerID, client.ContainerStopOptions{})
+		return err
 	}, 4)
 
 	if err != nil {
@@ -170,11 +182,12 @@ func StopContainer(instance *model.Instance) error {
 func RemoveContainer(instance *model.Instance) error {
 	containerID := fmt.Sprintf("%s_%s", instance.Type, instance.InstanceID)
 	err := utils.DoWithRetry(func() error {
-		return utils.DockerClient.ContainerRemove(
+		_, err := utils.DockerClient.ContainerRemove(
 			context.Background(),
 			containerID,
-			types.ContainerRemoveOptions{Force: true},
+			client.ContainerRemoveOptions{Force: true},
 		)
+		return err
 	}, 4)
 
 	if err != nil {

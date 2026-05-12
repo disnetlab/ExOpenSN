@@ -29,3 +29,7 @@ daemon/opensn-daemon
 tools/namespace-generator/generator
 daemon/share/static/
 opensn_build
+
+#[Experiment]
+TopoConfigurators/opensn-go
+TopoConfigurators/opensn-rust

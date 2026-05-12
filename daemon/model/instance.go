@@ -4,6 +4,8 @@ import (
 	"NodeDaemon/utils"
 	"context"
 	"fmt"
+
+	"github.com/moby/moby/client"
 )
 
 type DeviceRequireInfo struct {
@@ -35,7 +37,7 @@ type Instance struct {
 func (i *Instance) IsCreated() bool {
 	_, err := utils.DockerClient.ContainerInspect(context.Background(), fmt.Sprintf(
 		"%s_%s", i.Type, i.InstanceID,
-	))
+	), client.ContainerInspectOptions{})
 	if err != nil {
 		return false
 	}
@@ -45,9 +47,9 @@ func (i *Instance) IsCreated() bool {
 func (i *Instance) IsRunning() bool {
 	info, err := utils.DockerClient.ContainerInspect(context.Background(), fmt.Sprintf(
 		"%s_%s", i.Type, i.InstanceID,
-	))
+	), client.ContainerInspectOptions{})
 	if err != nil {
 		return false
 	}
-	return info.State.Running
+	return info.Container.State.Running
 }
