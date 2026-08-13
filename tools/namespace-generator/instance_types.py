@@ -13,6 +13,12 @@ EX_TOTAL_AREA_X = "TotalAreaX"
 EX_TOTAL_AREA_Y = "TotalAreaY"
 EX_GROUND_INDEX = "GroundStationIndex"
 
+EX_PANEL_AREA_KEY = "panel_area_m2"
+EX_CELL_EFFICIENCY_KEY = "cell_efficiency"
+EX_SYSTEM_EFFICIENCY_KEY = "system_efficiency"
+EX_IDLE_POWER_KEY = "idle_power_w"
+EX_MAX_POWER_KEY = "max_power_w"
+
 TYPE_GROUND_STATION = "GroundStation"
 TYPE_GROUND_TERMINAL = "GroundTerminal"
 

@@ -1,4 +1,5 @@
 POSITION_LIST_KEY = "/position"
+SOLAR_INPUT_LIST_KEY = "/solar_input"
 NODE_INST_KEY_TEMPLATE = "/node_%d/instances"
 NODE_INST_RUNTIME_KEY_TEMPLATE = "/node_%d/instance_runtime"
 NODE_LINK_KEY_TEMPLATE = "/node_%d/links"

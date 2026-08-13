@@ -1,3 +1,4 @@
+// the central place where OpenSN defines its etcd key paths.
 package key
 
 import (
@@ -23,6 +24,8 @@ const (
 	NodeLinkListKeyTemplate        = "/node_%d/links"
 	NodeLinkParameterKeyTemplate   = "/node_%d/link_parameter"
 	InstancePositionKey            = "/position"
+	InstanceSolarInputKey          = "/solar_input"  // written by Python (pyephem angle + utilization)
+	InstancePowerKey               = "/power"        // written by Go PowerModule (computed P_gen/P_consume)
 	NodeInstanceConfigKeyTemplate  = "/instance_config/node_%d"
 )
 

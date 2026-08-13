@@ -16,3 +16,16 @@ TYPE_GROUND_TERMINAL = "GroundTerminal"
 EX_LATITUDE_KEY = "latitude"
 EX_LONGITUDE_KEY = "longitude"
 EX_ALTITUDE_KEY = "altitude"
+
+# ---------------------------------------------------------------------------
+# These string values MUST match
+# the Go-side constants in daemon/pkg/module/power_module.go
+# (ExPanelAreaKey etc.) exactly, since both languages read/write the same
+# Instance.Extra map keys.
+# ---------------------------------------------------------------------------
+
+EX_PANEL_AREA_KEY = "panel_area_m2"
+EX_CELL_EFFICIENCY_KEY = "cell_efficiency"
+EX_SYSTEM_EFFICIENCY_KEY = "system_efficiency"
+EX_IDLE_POWER_KEY = "idle_power_w"
+EX_MAX_POWER_KEY = "max_power_w"

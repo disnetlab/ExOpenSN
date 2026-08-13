@@ -1,6 +1,6 @@
 from datetime import datetime
 from type_model_def import EmulationTypeConfig, TopologyLink, TopologyInstance, TopologyConfig
-from instance_types import EX_TLE0_KEY,EX_TLE1_KEY,EX_TLE2_KEY,EX_ORBIT_INDEX,EX_SATELLITE_INDEX,EX_LATITUDE_KEY,EX_LONGITUDE_KEY,EX_GROUND_INDEX,TYPE_GROUND_STATION,TYPE_SATELLITE,EX_AREA_KEY,EX_ALTITUDE_KEY
+from instance_types import EX_TLE0_KEY,EX_TLE1_KEY,EX_TLE2_KEY,EX_ORBIT_INDEX,EX_SATELLITE_INDEX,EX_LATITUDE_KEY,EX_LONGITUDE_KEY,EX_GROUND_INDEX,TYPE_GROUND_STATION,TYPE_SATELLITE,EX_AREA_KEY,EX_ALTITUDE_KEY,EX_PANEL_AREA_KEY,EX_CELL_EFFICIENCY_KEY,EX_SYSTEM_EFFICIENCY_KEY,EX_IDLE_POWER_KEY,EX_MAX_POWER_KEY
 from address_type import LINK_V4_ADDR_KEY
 import random
 import json
@@ -109,6 +109,11 @@ if __name__ == "__main__":
                     EX_AREA_KEY:"0.0.0.0",
                     EX_ORBIT_INDEX: str(i),
                     EX_SATELLITE_INDEX: str(j),
+                    EX_PANEL_AREA_KEY: "12.5",         # hardware specs start here
+                    EX_CELL_EFFICIENCY_KEY: "0.29",    
+                    EX_SYSTEM_EFFICIENCY_KEY: "0.85",  
+                    EX_IDLE_POWER_KEY: "15.0",         
+                    EX_MAX_POWER_KEY: "120.0",
                 }))
             node_grid.append(array)
         links = []
@@ -137,3 +142,15 @@ if __name__ == "__main__":
         print(f"Generate topology_config_{constellation_x}_{constellation_y}.json")
         topology_config_file.write(topology_config.toJson())
         topology_config_file.close()
+
+
+
+# Values above are placeholders (space-grade cell efficiency 25-30% per the
+# design brief, plausible small-satellite panel area/power draw) — swap for
+# real per-satellite hardware specs once available. Since these are
+# per-instance dict entries, nothing stops different satellites in the same
+# constellation having different values — that's the whole point of the
+# per-satellite design (matching real hardware diversity across a
+# constellation), this generator script just currently produces uniform
+# constellations for all fields, power included.
+# ---------------------------------------------------------------------------

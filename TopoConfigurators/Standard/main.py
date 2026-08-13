@@ -1,5 +1,9 @@
 from opensn.operator.emulator_operator import EmulatorOperator
 from opensn.model.instance import Instance
+# me:
+from opensn.model.solar_input import SolarInput
+
+#them:
 from opensn.model.position import Position
 from opensn.const.dict_fields import PARAMETER_KEY_CONNECT,PARAMETER_KEY_DELAY,PARAMETER_KEY_BANDWIDTH,PARAMETER_KEY_LOSS
 from opensn.model.link import LinkBase
@@ -12,6 +16,9 @@ from address_type import LINK_V4_ADDR_KEY
 from time import sleep
 from address_allocator import alloc_ipv4,format_ipv4
 from loguru import logger
+
+# my code:
+from trajectory import calculate_postion,distance_meter, select_closest_satellite, get_propagation_delay_s, calculate_sun_angle
 import json, math
 step_second = 5
 
@@ -26,7 +33,7 @@ def genenrate_config(cli:EmulatorOperator,node_index:int,instance_id:str):
     }
     if instance_info.type == TYPE_SATELLITE:
         config_map['area'] = instance_info.extra[EX_AREA_KEY]
-    for k,v in instance_info.connections.items():
+    for k,v in (instance_info.connections or {}).items():
         instance_index = -1
         link_info = cli.get_link(node_index,k)
         for end_index in range(len(link_info.end_infos)):
@@ -43,6 +50,12 @@ def genenrate_config(cli:EmulatorOperator,node_index:int,instance_id:str):
         if another_instance_info.type == TYPE_SATELLITE:
             config_map["end_infos"][k]['area'] = another_instance_info.extra[EX_AREA_KEY]
     return config_map
+
+def get_utilization(instance_id: str) -> float:
+    """
+    Placeholder u(t)
+    """
+    return 0.5
 
 if __name__ == "__main__":
 
@@ -73,8 +86,11 @@ if __name__ == "__main__":
             node_link_map[node_index] = {}
             link_map = cli.get_link_map(node_index)
             for link_id,link_info in link_map.items():
-                if LINK_V4_ADDR_KEY not in link_info.address_infos[0] or \
-                    LINK_V4_ADDR_KEY not in link_info.address_infos[1] is None:
+                addr0 = link_info.address_infos[0] or {}
+                addr1 = link_info.address_infos[1] or {}
+                if LINK_V4_ADDR_KEY not in addr0 or LINK_V4_ADDR_KEY not in addr1:
+#                if LINK_V4_ADDR_KEY not in link_info.address_infos[0] or \
+#                    LINK_V4_ADDR_KEY not in link_info.address_infos[1] is None:
                     if link_id not in address_map.keys():
                         address_map[link_id] = alloc_ipv4(30)
                     
@@ -95,6 +111,13 @@ if __name__ == "__main__":
             if instance_info.start:
                 new_postion = calculate_postion(instance_info,time_now)
                 cli.put_position(instance_id,new_postion)
+
+                # My code:
+                if instance_info.type == TYPE_SATELLITE:
+                    gamma = calculate_sun_angle(instance_info, time_now)
+                    utilization = get_utilization(instance_id)  # see below
+                    cli.put_solar_input(instance_id,
+                                        SolarInput(sun_angle_rad=gamma, utilization=utilization))
             else:
                 new_postion = Position()
             position_map[instance_id] = new_postion
@@ -205,3 +228,4 @@ if __name__ == "__main__":
             config_map = genenrate_config(cli,instance_info.node_index,instance_id)
             cli.put_instance_config_if_not_exist(instance_info.node_index,instance_id,json.dumps(config_map))
         sleep(step_second)
+

@@ -1,3 +1,5 @@
+// main entry point of the Go NodeDaemon.
+//  Its job is to start and manage all the OpenSN modules, including the new PowerModule.
 package main
 
 import (
@@ -62,6 +64,12 @@ func main() {
 
 	if config.GlobalConfig.App.EnableMonitor {
 		modules = append(modules, module.CreateMonitorModule())
+	}
+
+	// PowerModule becomes part of the NodeDaemon's collection of modules.
+	// currently controlled by EnableMonitorf
+	if config.GlobalConfig.App.EnableMonitor {
+		modules = append(modules, module.CreatePowerModule())
 	}
 
 	for _, v := range modules {

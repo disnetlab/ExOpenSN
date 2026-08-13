@@ -15,6 +15,10 @@ from opensn.synchronizer.sync_node import get_node_map,get_node
 from opensn.synchronizer.sync_link import get_link,get_link_map,put_link,put_link_parameter,remove_link
 from opensn.synchronizer.sync_config import get_emulation_config,put_emulation_config
 
+# my imports
+from opensn.synchronizer.sync_solar_input import put_solar_input, get_solar_input, get_solar_input_map
+from opensn.model.solar_input import SolarInput
+
 def alloc_link_index(etcd_client: etcd3.Etcd3Client) -> int:
     resp,meta = etcd_client.get(NEXT_LINK_INDEX_KEY)
     index = 1
@@ -98,6 +102,18 @@ class EmulatorOperator:
     
     def put_position(self,instance_id:str,position:Position):
         return put_position(self.etcd_client,instance_id,position)
+
+    # my methods:
+    def put_solar_input(self, instance_id: str, solar_input: SolarInput):
+        return put_solar_input(self.etcd_client, instance_id, solar_input)
+
+    def get_solar_input(self, instance_id: str) -> SolarInput:
+        return get_solar_input(self.etcd_client, instance_id)
+
+    def get_solar_input_map(self) -> dict[str, SolarInput]:
+        return get_solar_input_map(self.etcd_client)
+
+    # continue:
     
     def put_instance_config(self,node_index:int,instance_id:str,config_seq:str):
         return put_instance_config(self.etcd_client,node_index,instance_id,config_seq)
