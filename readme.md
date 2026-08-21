@@ -104,8 +104,12 @@ After completing steps 4.1 and 4.2, run the `NodeDaemon` executable file with ad
 
 The `NodeDaemon` file relies on the `config/config.json` file in the same directory for configuration.
 
-Modify the `config.json` file according to the deployment environment before starting the `NodeDaemon` file.
+> **Note:** We have included example template files (`config.json.example` and `config.py.example`) in the repository. Since local config files are ignored by Git, you will need to copy or rename them to remove `.example` before running the project.
 
+* **For the Daemon Config:** Ensure `daemon/config/config.json` is created and populated based on your deployment environment (see sample structure in section 4.3).
+* **For the Topology Configurator Config:** Navigate to `TopoConfigurators/Standard/`, copy the provided example file to create `config.py`, and adjust the parameters according to your setup.
+
+Modify the `config.json` file according to the deployment environment before starting the `NodeDaemon` file.
 ```json
 {
   "app": { // Configuration related to NodeDaemon startup
