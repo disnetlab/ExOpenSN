@@ -1,0 +1,32 @@
+{% set control_host = groups['control'][0] %}
+{% set control_ip = hostvars[control_host]['ansible_facts']['default_ipv4']['address'] | default(control_host) %}
+{
+  "app": {
+    "is_servant": {{ ('worker' in group_names and 'control' not in group_names) | to_json }},
+    "master_address": "{{ control_ip }}",
+    "listen_port": 8080,
+    "enable_monitor": true,
+    "enable_code_server": true,
+    "interface_name": "{{ ansible_facts['default_ipv4']['interface'] }}",
+    "debug": false,
+    "instance_capacity": 1800,
+    "monitor_interval": 1,
+    "parallel_num": 64
+  },
+  "dependency": {
+    "etcd_addr": "{{ control_ip }}",
+    "etcd_port": 2379,
+    "influxdb_addr": "{{ control_ip }}",
+    "influxdb_port": 8086,
+    "influxdb_token": "1145141919810",
+    "influxdb_org": "satellite_emulator",
+    "influxdb_bucket": "monitor",
+    "code_server_addr": "{{ control_ip }}",
+    "code_server_port": 8079,
+    "docker_host_path": "/var/run/docker.sock"
+  },
+  "device": {
+    "FixPhysicalLink": [],
+    "MultiplexPhysicalLink": []
+  }
+}

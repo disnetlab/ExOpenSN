@@ -1,0 +1,56 @@
+---
+- name: Setup OpenSN environment
+  hosts:
+    - worker
+    - control
+  roles:
+    - opensn
+
+  tasks:
+    - name: Check NodeDaemon correctly started up on all hosts
+      ansible.builtin.command: pgrep -x NodeDaemon
+      register: daemon_check_all_running
+      changed_when: false
+      failed_when: daemon_check_all_running.rc != 0
+
+    - name: Fix permissions on OpenSN working directory
+      ansible.builtin.file:
+        path: "{{ opensn_remote_working_dir }}"
+        owner: ansible
+        group: ansible
+        recurse: true
+      become: true
+
+    - name: Remove stale remote __pycache__ directories
+      ansible.builtin.file:
+        path: "{{ opensn_remote_working_dir }}/Standard/opensn/operator/__pycache__"
+        state: absent
+      become: true
+
+    - name: Copy topology config"
+      ansible.builtin.copy:
+        src: "{{ opensn_topology_config_src }}"
+        dest: "{{ opensn_remote_working_dir }}/topology_config.json"
+        mode: "0755"
+      when: "'control' in group_names"
+
+    - name: Copy node config"
+      ansible.builtin.copy:
+        src: "{{ opensn_node_config_src }}"
+        dest: "{{ opensn_remote_working_dir }}/node_config.json"
+        mode: "0755"
+      when: "'control' in group_names"
+
+    - name: Install requirements
+      ansible.builtin.command: "pip install -r ./requirements.txt"
+      args:
+        chdir: "{{ opensn_remote_working_dir }}/Standard"
+      become: true
+      changed_when: true
+
+    - name: Run experiment
+      ansible.builtin.command: "make run"
+      args:
+        chdir: "{{ opensn_remote_working_dir }}/Standard"
+      become: true
+      changed_when: true

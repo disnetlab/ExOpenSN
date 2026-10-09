@@ -1,0 +1,34 @@
+---
+- name: Teardown OpenSN environment
+  hosts:
+    - worker
+    - control
+  roles:
+    - opensn
+
+  tasks:
+    - name: Kill NodeDaemon process on worker hosts
+      ansible.builtin.command: pkill -x NodeDaemon
+      become: true
+      register: kill_result_worker
+      failed_when: false
+      changed_when: kill_result_worker.rc == 0
+      when: "'worker' in group_names and 'control' not in group_names"
+
+    - name: Kill NodeDaemon process on control host
+      ansible.builtin.command: pkill -x NodeDaemon
+      become: true
+      register: kill_result_control
+      failed_when: false
+      changed_when: kill_result_control.rc == 0
+      when: "'control' in group_names"
+
+    - name: Stop dependency services
+      ansible.builtin.command: "{{ opensn_remote_working_dir }}/scripts/stop_depend_service.sh"
+      changed_when: true
+      when: "'control' in group_names"
+
+    - name: Remove remaining links
+      ansible.builtin.command: "{{ opensn_remote_working_dir }}/scripts/delete_link_prefix.sh"
+      become: true
+      changed_when: true

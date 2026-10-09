@@ -1,0 +1,8 @@
+---
+opensn_remote_working_dir: "{{ ansible_facts['user_dir'] }}/opensn"
+opensn_script_source_directory:
+opensn_daemon_src:
+opensn_host_config_template_src:
+opensn_experiment_controler_src:
+opensn_topology_config_src:
+opensn_node_config_src:
