@@ -1,0 +1,111 @@
+---
+- name: Setup OpenSN environment
+  hosts:
+    - worker
+    - control
+  roles:
+    - opensn
+
+  tasks:
+    - name: Ensure remote directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ opensn_remote_working_dir }}"
+        - "{{ opensn_remote_working_dir }}/scripts"
+        - "{{ opensn_remote_working_dir }}/config"
+
+    - name: Copy delete_link_prefix.sh
+      ansible.builtin.copy:
+        src: "{{ opensn_script_source_directory }}/delete_link_prefix.sh"
+        dest: "{{ opensn_remote_working_dir }}/scripts/delete_link_prefix.sh"
+        mode: "0755"
+
+    - name: Copy kernel_setting.sh
+      ansible.builtin.copy:
+        src: "{{ opensn_script_source_directory }}/kernel_setting.sh"
+        dest: "{{ opensn_remote_working_dir }}/scripts/kernel_setting.sh"
+        mode: "0755"
+
+    - name: Copy daemon
+      ansible.builtin.copy:
+        src: "{{ opensn_daemon_src }}"
+        dest: "{{ opensn_remote_working_dir }}/NodeDaemon"
+        mode: "0755"
+
+    - name: Copy start_depend_service.sh
+      ansible.builtin.copy:
+        src: "{{ opensn_script_source_directory }}/start_depend_service.sh"
+        dest: "{{ opensn_remote_working_dir }}/scripts/start_depend_service.sh"
+        mode: "0755"
+      when: "'control' in group_names"
+
+    - name: Copy stop_depend_service.sh
+      ansible.builtin.copy:
+        src: "{{ opensn_script_source_directory }}/stop_depend_service.sh"
+        dest: "{{ opensn_remote_working_dir }}/scripts/stop_depend_service.sh"
+        mode: "0755"
+      when: "'control' in group_names"
+
+    - name: Deploy host configuration from template
+      ansible.builtin.template:
+        src: "{{ opensn_host_config_template_src }}"
+        dest: "{{ opensn_remote_working_dir }}/config/config.json"
+        mode: "0644"
+
+    - name: Configure kernel parameters
+      ansible.builtin.command: "{{ opensn_remote_working_dir }}/scripts/kernel_setting.sh"
+      become: true
+      changed_when: true
+
+    - name: Remove remaining links
+      ansible.builtin.command: "{{ opensn_remote_working_dir }}/scripts/delete_link_prefix.sh"
+      become: true
+      changed_when: true
+
+    - name: Start dependency services
+      ansible.builtin.command: "{{ opensn_remote_working_dir }}/scripts/start_depend_service.sh"
+      changed_when: true
+      when: "'control' in group_names"
+
+    - name: Check if NodeDaemon is running on control host
+      ansible.builtin.command: pgrep -x NodeDaemon
+      register: daemon_check_control
+      failed_when: false
+      changed_when: false
+      when: "'control' in group_names"
+
+    - name: Start daemon on control host if not running
+      ansible.builtin.shell: "nohup ./NodeDaemon > ./nodedaemon.log 2>&1 &"
+      become: true
+      args:
+        chdir: "{{ opensn_remote_working_dir }}"
+      when:
+        - "'control' in group_names"
+        - daemon_check_control.rc != 0
+      changed_when: true
+
+    - name: Check if NodeDaemon is running on worker hosts
+      ansible.builtin.command: pgrep -x NodeDaemon
+      register: daemon_check_worker
+      failed_when: false
+      changed_when: false
+      when: "'worker' in group_names and 'control' not in group_names"
+
+    - name: Start daemon on worker hosts if not running
+      ansible.builtin.shell: "nohup ./NodeDaemon > ./nodedaemon.log 2>&1 &"
+      become: true
+      args:
+        chdir: "{{ opensn_remote_working_dir }}"
+      when:
+        - "'worker' in group_names and 'control' not in group_names"
+        - daemon_check_worker.rc != 0
+      changed_when: true
+
+    - name: Check NodeDaemon correctly started up on all hosts
+      ansible.builtin.command: pgrep -x NodeDaemon
+      register: daemon_check_all_running
+      changed_when: false
+      failed_when: daemon_check_all_running.rc != 0
